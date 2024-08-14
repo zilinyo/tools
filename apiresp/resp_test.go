@@ -3,7 +3,7 @@ package apiresp
 import (
 	"github.com/openimsdk/protocol/friend"
 	"github.com/openimsdk/protocol/wrapperspb"
-	"github.com/openimsdk/tools/utils/jsonutil"
+	"github.com/zilinyo/tools/utils/jsonutil"
 	"testing"
 )
 
