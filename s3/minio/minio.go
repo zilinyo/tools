@@ -31,12 +31,12 @@ import (
 	"unsafe"
 
 	"github.com/minio/minio-go/v7"
-	"github.com/openimsdk/tools/s3"
+	"github.com/zilinyo/tools/s3"
 
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/signer"
-	"github.com/openimsdk/tools/errs"
-	"github.com/openimsdk/tools/log"
+	"github.com/zilinyo/tools/errs"
+	"github.com/zilinyo/tools/log"
 )
 
 const (
