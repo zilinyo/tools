@@ -7,9 +7,9 @@
 ###################################=> common commands <=#############################################
 # ========================== Capture Environment ===============================
 # get the repo root and output path
-ROOT_PACKAGE=github.com/zilinyo/tools
+ROOT_PACKAGE=github.com/openimsdk/tools
 OUT_DIR=$(REPO_ROOT)/_output
-VERSION_PACKAGE=github.com/zilinyo/tools/version
+VERSION_PACKAGE=github.com/openimsdk/tools/version
 # ==============================================================================
 
 

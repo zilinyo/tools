@@ -18,9 +18,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/minio/minio-go/v7"
-	"github.com/zilinyo/tools/errs"
-	"github.com/zilinyo/tools/s3"
 	"image"
 	"image/gif"
 	"image/jpeg"
@@ -30,7 +27,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zilinyo/tools/log"
+	"github.com/minio/minio-go/v7"
+	"github.com/openimsdk/tools/errs"
+	"github.com/openimsdk/tools/log"
+	"github.com/openimsdk/tools/s3"
 )
 
 func (m *Minio) getImageThumbnailURL(ctx context.Context, name string, expire time.Duration, opt *s3.Image) (string, error) {
@@ -58,24 +58,12 @@ func (m *Minio) getImageThumbnailURL(ctx context.Context, name string, expire ti
 	switch opt.Format {
 	case formatPng, formatJpeg, formatGif:
 	default:
-		opt.Format = ""
+		opt.Format = formatPng
 	}
 	reqParams := make(url.Values)
 	if opt.Width == info.Width && opt.Height == info.Height && (opt.Format == info.Format || opt.Format == "") {
 		reqParams.Set("response-content-type", "image/"+info.Format)
 		return m.PresignedGetObject(ctx, name, expire, reqParams)
-	}
-	if opt.Format == "" {
-		switch opt.Format {
-		case formatGif:
-			opt.Format = formatGif
-		case formatJpeg:
-			opt.Format = formatJpeg
-		case formatPng:
-			opt.Format = formatPng
-		default:
-			opt.Format = formatPng
-		}
 	}
 	key, err := m.cache.GetThumbnailKey(ctx, name, opt.Format, opt.Width, opt.Height, func(ctx context.Context) (string, error) {
 		if img == nil {
@@ -99,6 +87,9 @@ func (m *Minio) getImageThumbnailURL(ctx context.Context, name string, expire ti
 			err = jpeg.Encode(buf, thumbnail, nil)
 		case formatGif:
 			err = gif.Encode(buf, thumbnail, nil)
+		}
+		if err != nil {
+			return "", errs.WrapMsg(err, "encode failed", "type", opt.Format)
 		}
 		cacheKey := filepath.Join(imageThumbnailPath, info.Etag, fmt.Sprintf("image_w%d_h%d.%s", opt.Width, opt.Height, opt.Format))
 		if _, err = m.core.Client.PutObject(ctx, m.bucket, cacheKey, buf, int64(buf.Len()), minio.PutObjectOptions{}); err != nil {

@@ -31,6 +31,13 @@ const (
 	formatJpeg = "jpeg"
 	formatJpg  = "jpg"
 	formatGif  = "gif"
+	formatWebP = "webp"
+	formatTiff = "tiff"
+	formatBmp  = "bmp"
+
+	formatHeic = "heic"
+	formatHeif = "heif"
+	formatAvif = "avif"
 )
 
 func ImageStat(reader io.Reader) (image.Image, string, error) {
@@ -117,4 +124,22 @@ func resizeImage(img image.Image, maxWidth, maxHeight int) image.Image {
 
 	// By default, the original image is returned
 	return img
+}
+
+func getThumbnailSize(img image.Image) (thumbnailWidth, thumbnailHeight int) {
+	bounds := img.Bounds()
+	imgWidth := bounds.Max.X
+	imgHeight := bounds.Max.Y
+
+	if imgWidth < 640 {
+		thumbnailWidth = imgWidth
+	} else {
+		thumbnailWidth = 640
+	}
+	if imgHeight < 640 {
+		thumbnailHeight = imgHeight
+	} else {
+		thumbnailHeight = 640
+	}
+	return thumbnailWidth, thumbnailHeight
 }

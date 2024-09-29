@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/go-zookeeper/zk"
-	"github.com/zilinyo/tools/errs"
+	"github.com/openimsdk/tools/errs"
 )
 
 type Config struct {

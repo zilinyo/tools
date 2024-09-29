@@ -18,7 +18,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/zilinyo/tools/errs"
+	"github.com/openimsdk/tools/errs"
 )
 
 // GetString returns the env variable for the given key

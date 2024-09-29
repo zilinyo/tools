@@ -16,20 +16,22 @@ package a2r
 
 import (
 	"context"
-	"github.com/zilinyo/tools/checker"
+	"github.com/openimsdk/tools/checker"
 	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"github.com/zilinyo/tools/apiresp"
-	"github.com/zilinyo/tools/errs"
-	"github.com/zilinyo/tools/utils/jsonutil"
+	"github.com/openimsdk/tools/apiresp"
+	"github.com/openimsdk/tools/errs"
+	"github.com/openimsdk/tools/utils/jsonutil"
 	"google.golang.org/grpc"
 )
 
 type Option[A, B any] struct {
+	// BindAfter is called after the req is bind from ctx.
 	BindAfter func(*A) error
+	// RespAfter is called after the resp is return from rpc.
 	RespAfter func(*B) error
 }
 
@@ -72,7 +74,7 @@ func Call[A, B, C any](rpc func(client C, ctx context.Context, req *A, options .
 func ParseRequestNotCheck[T any](c *gin.Context) (*T, error) {
 	var req T
 	if err := c.ShouldBindWith(&req, jsonBind); err != nil {
-		return nil, err
+		return nil, errs.NewCodeError(errs.ArgsError, err.Error())
 	}
 	return &req, nil
 }

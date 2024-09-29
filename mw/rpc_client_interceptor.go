@@ -16,13 +16,14 @@ package mw
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/openimsdk/protocol/constant"
 	"github.com/openimsdk/protocol/errinfo"
-	"github.com/zilinyo/tools/errs"
-	"github.com/zilinyo/tools/log"
+	"github.com/openimsdk/tools/errs"
+	"github.com/openimsdk/tools/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -44,10 +45,13 @@ func RpcClientInterceptor(ctx context.Context, method string, req, resp any, cc 
 	log.ZDebug(ctx, fmt.Sprintf("RPC Client Request - %s", extractFunctionName(method)), "funcName", method, "req", req, "conn target", cc.Target())
 	err = invoker(ctx, method, req, resp, cc, opts...)
 	if err == nil {
-		log.ZInfo(ctx, fmt.Sprintf("RPC Client Response Success - %s", extractFunctionName(method)), "funcName", method, "resp", rpcString(resp))
+		log.ZInfo(ctx, fmt.Sprintf("RPC Client Response Success - %s", extractFunctionName(method)), "funcName", method, "resp", resp)
 		return nil
+	} else if errors.Is(err, errs.ErrRecordNotFound) {
+		log.ZWarn(ctx, fmt.Sprintf("RPC Client Response Error - %s", extractFunctionName(method)), err, "funcName", method)
+	} else {
+		log.ZError(ctx, fmt.Sprintf("RPC Client Response Error - %s", extractFunctionName(method)), err, "funcName", method)
 	}
-	log.ZError(ctx, fmt.Sprintf("RPC Client Response Error - %s", extractFunctionName(method)), err, "funcName", method)
 	rpcErr, ok := err.(interface{ GRPCStatus() *status.Status })
 	if !ok {
 		return errs.ErrInternalServer.WrapMsg(err.Error())

@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/IBM/sarama"
-	"github.com/zilinyo/tools/errs"
+	"github.com/openimsdk/tools/errs"
 )
 
 func Check(ctx context.Context, conf *Config, topics []string) error {

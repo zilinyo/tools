@@ -4,7 +4,7 @@
 package main
 
 import (
-	"github.com/zilinyo/tools/utils/mageutil"
+	"github.com/openimsdk/tools/utils/mageutil"
 	"os"
 	"strings"
 )

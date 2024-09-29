@@ -3,9 +3,9 @@ package checker_test
 import (
 	"testing"
 
+	"github.com/openimsdk/tools/checker"
+	"github.com/openimsdk/tools/errs"
 	"github.com/stretchr/testify/assert"
-	"github.com/zilinyo/tools/checker"
-	"github.com/zilinyo/tools/errs"
 )
 
 type mockChecker struct {

@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/zilinyo/tools/errs"
-	"github.com/zilinyo/tools/utils/jsonutil"
+	"github.com/openimsdk/tools/errs"
+	"github.com/openimsdk/tools/utils/jsonutil"
 )
 
 type ApiResponse struct {
@@ -37,7 +37,7 @@ func (r *ApiResponse) MarshalJSON() ([]byte, error) {
 			format.ApiFormat()
 		}
 		if isAllFieldsPrivate(tmp.Data) {
-			tmp.Data = json.RawMessage(nil)
+			tmp.Data = nil
 		} else {
 			data, err := jsonutil.JsonMarshal(tmp.Data)
 			if err != nil {

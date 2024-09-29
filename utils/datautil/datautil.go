@@ -16,46 +16,65 @@ package datautil
 
 import (
 	"github.com/jinzhu/copier"
-	"github.com/zilinyo/tools/db/pagination"
-	"github.com/zilinyo/tools/errs"
-	"github.com/zilinyo/tools/utils/jsonutil"
+	"github.com/openimsdk/tools/db/pagination"
+	"github.com/openimsdk/tools/errs"
+	"github.com/openimsdk/tools/utils/jsonutil"
+	"math/rand"
 	"reflect"
 	"sort"
+	"time"
 )
 
-// SliceSub returns elements in slice a that are not present in slice b (a - b).
-func SliceSub[E comparable](a, b []E) []E {
+// SliceSubFuncs returns elements in slice a that are not present in slice b (a - b) and remove duplicates.
+// Determine if elements are equal based on the result returned by fna(a[i]) and fnb(b[i]).
+func SliceSubFuncs[T, V any, E comparable](a []T, b []V, fna func(i T) E, fnb func(i V) E) []T {
 	if len(b) == 0 {
 		return a
 	}
 	k := make(map[E]struct{})
 	for i := 0; i < len(b); i++ {
-		k[b[i]] = struct{}{}
+		k[fnb(b[i])] = struct{}{}
 	}
 	t := make(map[E]struct{})
-	rs := make([]E, 0, len(a))
+	rs := make([]T, 0, len(a))
 	for i := 0; i < len(a); i++ {
-		e := a[i]
+		e := fna(a[i])
 		if _, ok := t[e]; ok {
 			continue
 		}
 		if _, ok := k[e]; ok {
 			continue
 		}
-		rs = append(rs, e)
+		rs = append(rs, a[i])
 		t[e] = struct{}{}
 	}
 	return rs
 }
 
-// SliceSubAny returns elements in slice a that are not present in slice b (a - b).
+// SliceSubFunc returns elements in slice a that are not present in slice b (a - b) and remove duplicates.
+// Determine if elements are equal based on the result returned by fn.
+func SliceSubFunc[T any, E comparable](a, b []T, fn func(i T) E) []T {
+	return SliceSubFuncs(a, b, fn, fn)
+}
+
+// SliceSub returns elements in slice a that are not present in slice b (a - b) and remove duplicates.
+func SliceSub[E comparable](a, b []E) []E {
+	return SliceSubFunc(a, b, func(i E) E { return i })
+}
+
+// SliceSubAny returns elements in slice a that are not present in slice b (a - b) and remove duplicates.
 // fn is a function that converts elements of slice b to elements comparable with those in slice a.
 func SliceSubAny[E comparable, T any](a []E, b []T, fn func(t T) E) []E {
 	return SliceSub(a, Slice(b, fn))
 }
 
+// SliceSubConvertPre returns elements in slice a that are not present in slice b (a - b) and remove duplicates.
+// fn is a function that converts elements of slice a to elements comparable with those in slice b.
+func SliceSubConvertPre[E comparable, T any](a []T, b []E, fn func(t T) E) []T {
+	return SliceSubFuncs(a, b, fn, func(i E) E { return i })
+}
+
 // SliceAnySub returns elements in slice a that are not present in slice b (a - b).
-// fn is a function that extracts a comparable value from elements of slice a.
 func SliceAnySub[E any, T comparable](a, b []E, fn func(t E) T) []E {
 	m := make(map[T]E)
 	for i := 0; i < len(b); i++ {
@@ -173,6 +192,38 @@ func IndexOf[E comparable](e E, es ...E) int {
 	})
 }
 
+// DeleteElems delete elems in slice.
+func DeleteElems[E comparable](es []E, delEs ...E) []E {
+	switch len(delEs) {
+	case 0:
+		return es
+	case 1:
+		for i := range es {
+			if es[i] == delEs[0] {
+				return append(es[:i], es[i+1:]...)
+			}
+		}
+		return es
+	default:
+		elMap := make(map[E]int)
+		for _, e := range delEs {
+			elMap[e]++
+		}
+		res := make([]E, 0, len(es))
+		for i := range es {
+			if _, ok := elMap[es[i]]; ok {
+				elMap[es[i]]--
+				if elMap[es[i]] == 0 {
+					delete(elMap, es[i])
+				}
+				continue
+			}
+			res = append(res, es[i])
+		}
+		return res
+	}
+}
+
 // Contain Whether to include
 func Contain[E comparable](e E, es ...E) bool {
 	return IndexOf(e, es...) >= 0
@@ -233,6 +284,15 @@ func SliceSetAny[E any, K comparable](es []E, fn func(e E) K) map[K]struct{} {
 	})
 }
 
+// MapToSlice map to slice
+func MapToSlice[E any, K comparable](m map[K]E) []E {
+	es := make([]E, 0, len(m))
+	for _, v := range m {
+		es = append(es, v)
+	}
+	return es
+}
+
 func Filter[E, T any](es []E, fn func(e E) (T, bool)) []T {
 	rs := make([]T, 0, len(es))
 	for i := 0; i < len(es); i++ {
@@ -289,6 +349,26 @@ func Max[E Ordered](e ...E) E {
 		}
 	}
 	return v
+}
+
+// Between checks if data is between left and right, excluding equality.
+func Between[E Ordered](data, left, right E) bool {
+	return left < data && data < right
+}
+
+// BetweenEq checks if data is between left and right, including equality.
+func BetweenEq[E Ordered](data, left, right E) bool {
+	return left <= data && data <= right
+}
+
+// BetweenLEq checks if data is between left and right, including left equality.
+func BetweenLEq[E Ordered](data, left, right E) bool {
+	return left <= data && data < right
+}
+
+// BetweenREq checks if data is between left and right, including right equality.
+func BetweenREq[E Ordered](data, left, right E) bool {
+	return left < data && data <= right
 }
 
 func Paginate[E any](es []E, pageNumber int, showNumber int) []E {
@@ -620,6 +700,21 @@ func SetSwitchFromOptions(options map[string]bool, key string, value bool) {
 // copy a by b  b->a
 func CopyStructFields(a any, b any, fields ...string) (err error) {
 	return copier.Copy(a, b)
+}
+
+func CopySlice[T any](a []T) []T {
+	ns := make([]T, len(a))
+	copy(ns, a)
+	return ns
+}
+
+func ShuffleSlice[T any](a []T) []T {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	shuffled := CopySlice(a)
+	r.Shuffle(len(shuffled), func(i, j int) {
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+	})
+	return shuffled
 }
 
 func GetElemByIndex(array []int, index int) (int, error) {

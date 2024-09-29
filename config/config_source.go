@@ -17,7 +17,7 @@ package config
 import (
 	"os"
 
-	"github.com/zilinyo/tools/errs"
+	"github.com/openimsdk/tools/errs"
 )
 
 // ConfigSource configuring source interfaces.

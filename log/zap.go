@@ -1,32 +1,34 @@
-// Copyright © 2023 OpenIM. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package log
 
 import (
 	"context"
 	"fmt"
-	"github.com/zilinyo/tools/utils/stringutil"
 	"os"
 	"path/filepath"
 	"time"
 
-	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
-	"github.com/openimsdk/protocol/constant"
-	"github.com/zilinyo/tools/mcontext"
+	rotatelogs "github.com/openimsdk/tools/log/file-rotatelogs"
+	"github.com/openimsdk/tools/utils/stringutil"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/openimsdk/protocol/constant"
+	"github.com/openimsdk/tools/mcontext"
+)
+
+type LogFormatter interface {
+	Format() any
+}
+
+const (
+	LevelFatal = iota
+	LevelPanic
+	LevelError
+	LevelWarn
+	LevelInfo
+	LevelDebug
+	LevelDebugWithSQL
 )
 
 var (
@@ -34,13 +36,13 @@ var (
 	osStdout    Logger
 	sp          = string(filepath.Separator)
 	logLevelMap = map[int]zapcore.Level{
-		6: zapcore.DebugLevel,
-		5: zapcore.DebugLevel,
-		4: zapcore.InfoLevel,
-		3: zapcore.WarnLevel,
-		2: zapcore.ErrorLevel,
-		1: zapcore.FatalLevel,
-		0: zapcore.PanicLevel,
+		LevelDebugWithSQL: zapcore.DebugLevel,
+		LevelDebug:        zapcore.DebugLevel,
+		LevelInfo:         zapcore.InfoLevel,
+		LevelWarn:         zapcore.WarnLevel,
+		LevelError:        zapcore.ErrorLevel,
+		LevelPanic:        zapcore.PanicLevel,
+		LevelFatal:        zapcore.FatalLevel,
 	}
 )
 
@@ -48,8 +50,9 @@ const callDepth = 2
 const hoursPerDay = 24
 
 // InitFromConfig initializes a Zap-based logger.
-func InitFromConfig(
+func InitLoggerFromConfig(
 	loggerPrefixName, moduleName string,
+	sdkType, platformName string,
 	logLevel int,
 	isStdout bool,
 	isJson bool,
@@ -57,12 +60,14 @@ func InitFromConfig(
 	rotateCount uint,
 	rotationTime uint,
 	moduleVersion string,
+	isSimplify bool,
 ) error {
-	l, err := NewZapLogger(loggerPrefixName, moduleName, logLevel, isStdout, isJson, logLocation,
-		rotateCount, rotationTime, moduleVersion)
+
+	l, err := NewZapLogger(loggerPrefixName, moduleName, sdkType, platformName, logLevel, isStdout, isJson, logLocation, rotateCount, rotationTime, moduleVersion, isSimplify)
 	if err != nil {
 		return err
 	}
+
 	pkgLogger = l.WithCallDepth(callDepth)
 	if isJson {
 		pkgLogger = pkgLogger.WithName(moduleName)
@@ -128,10 +133,13 @@ type ZapLogger struct {
 	moduleVersion    string
 	loggerPrefixName string
 	rotationTime     time.Duration
+	sdkType          string
+	platformName     string
+	isSimplify       bool
 }
 
 func NewZapLogger(
-	loggerPrefixName, moduleName string,
+	loggerPrefixName, moduleName string, sdkType, platformName string,
 	logLevel int,
 	isStdout bool,
 	isJson bool,
@@ -139,6 +147,7 @@ func NewZapLogger(
 	rotateCount uint,
 	rotationTime uint,
 	moduleVersion string,
+	isSimplify bool,
 ) (*ZapLogger, error) {
 	zapConfig := zap.Config{
 		Level:             zap.NewAtomicLevelAt(logLevelMap[logLevel]),
@@ -149,8 +158,15 @@ func NewZapLogger(
 	} else {
 		zapConfig.Encoding = "console"
 	}
-	zl := &ZapLogger{level: logLevelMap[logLevel], moduleName: moduleName, loggerPrefixName: loggerPrefixName,
-		rotationTime: time.Duration(rotationTime) * time.Hour, moduleVersion: moduleVersion}
+	zl := &ZapLogger{level: logLevelMap[logLevel],
+		moduleName:       moduleName,
+		loggerPrefixName: loggerPrefixName,
+		rotationTime:     time.Duration(rotationTime) * time.Hour,
+		moduleVersion:    moduleVersion,
+		sdkType:          sdkType,
+		platformName:     platformName,
+		isSimplify:       isSimplify,
+	}
 	opts, err := zl.cores(isStdout, isJson, logLocation, rotateCount)
 	if err != nil {
 		return nil, err
@@ -190,6 +206,7 @@ func NewConsoleZapLogger(
 	zl.zap = l.Sugar()
 	return zl, nil
 }
+
 func (l *ZapLogger) cores(isStdout bool, isJson bool, logLocation string, rotateCount uint) (zap.Option, error) {
 	c := zap.NewProductionEncoderConfig()
 	c.EncodeTime = l.timeEncoder
@@ -259,11 +276,42 @@ func (l *ZapLogger) consoleCores(outPut *os.File, isJson bool) (zap.Option, erro
 }
 
 func (l *ZapLogger) customCallerEncoder(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
-	fixedLength := 50
-	trimmedPath := caller.TrimmedPath()
-	trimmedPath = "[" + trimmedPath + "]"
-	s := stringutil.FormatString(trimmedPath, fixedLength, true)
-	enc.AppendString(s)
+	if l.sdkType != "" && l.platformName != "" {
+		fixedLength := 50
+		sdkPlatform := fmt.Sprintf("[%s/%s]", l.sdkType, l.platformName)
+		sdkPlatformFormatted := stringutil.FormatString(sdkPlatform, fixedLength, true)
+		enc.AppendString(sdkPlatformFormatted)
+
+		trimmedPath := caller.TrimmedPath()
+		trimmedPath = "[" + trimmedPath + "]"
+		s := stringutil.FormatString(trimmedPath, fixedLength, true)
+		enc.AppendString(s)
+	} else {
+		fixedLength := 50
+		trimmedPath := caller.TrimmedPath()
+		trimmedPath = "[" + trimmedPath + "]"
+		s := stringutil.FormatString(trimmedPath, fixedLength, true)
+		enc.AppendString(s)
+	}
+}
+
+func SDKLog(ctx context.Context, logLevel int, file string, line int, msg string, err error, keysAndValues []any) {
+	nativeCallerKey := "native_caller"
+	nativeCaller := fmt.Sprintf("[%s:%d]", file, line)
+
+	kv := []any{nativeCallerKey, nativeCaller}
+	kv = append(kv, keysAndValues...)
+
+	switch logLevel {
+	case LevelDebugWithSQL:
+		ZDebug(ctx, msg, kv...)
+	case LevelInfo:
+		ZInfo(ctx, msg, kv...)
+	case LevelWarn:
+		ZWarn(ctx, msg, err, kv...)
+	case LevelError:
+		ZError(ctx, msg, err, kv...)
+	}
 }
 
 func (l *ZapLogger) timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
@@ -368,6 +416,26 @@ func (l *ZapLogger) kvAppend(ctx context.Context, keysAndValues []any) []any {
 	triggerID := mcontext.GetTriggerID(ctx)
 	opUserPlatform := mcontext.GetOpUserPlatform(ctx)
 	remoteAddr := mcontext.GetRemoteAddr(ctx)
+
+	if l.isSimplify {
+		if len(keysAndValues)%2 == 0 {
+			for i := 1; i < len(keysAndValues); i += 2 {
+
+				if val, ok := keysAndValues[i].(LogFormatter); ok && val != nil {
+					keysAndValues[i] = val.Format()
+				}
+			}
+		} else {
+			ZError(ctx, "keysAndValues length is not even", nil)
+		}
+	}
+
+	for i := 1; i < len(keysAndValues); i += 2 {
+		if s, ok := keysAndValues[i].(interface{ String() string }); ok {
+			keysAndValues[i] = s.String()
+		}
+	}
+
 	if opUserID != "" {
 		keysAndValues = append([]any{constant.OpUserID, opUserID}, keysAndValues...)
 	}
