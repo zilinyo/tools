@@ -16,9 +16,9 @@ package datautil
 
 import (
 	"github.com/jinzhu/copier"
-	"github.com/openimsdk/tools/db/pagination"
-	"github.com/openimsdk/tools/errs"
-	"github.com/openimsdk/tools/utils/jsonutil"
+	"github.com/zilinyo/tools/db/pagination"
+	"github.com/zilinyo/tools/errs"
+	"github.com/zilinyo/tools/utils/jsonutil"
 	"math/rand"
 	"reflect"
 	"sort"

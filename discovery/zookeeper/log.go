@@ -17,7 +17,7 @@ package zookeeper
 import (
 	"context"
 
-	"github.com/openimsdk/tools/log"
+	"github.com/zilinyo/tools/log"
 )
 
 type nilLog struct{}

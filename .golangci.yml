@@ -1,4 +1,4 @@
-# Copyright © 2023 OpenIMSDK open source community. All rights reserved.
+# Copyright © 2023 zilinyo open source community. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -299,7 +299,7 @@ linters-settings:
   goimports:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
-    local-prefixes: github.com/openimsdk/open-im-server
+    local-prefixes: github.com/zilinyo/open-im-server
 
   gomnd:
     settings:
@@ -636,8 +636,8 @@ linters-settings:
     ignorePackageGlobs:
         - encoding/*
         - github.com/pkg/*
-        - github.com/openimsdk/*
-        - github.com/OpenIMSDK/*
+        - github.com/zilinyo/*
+        - github.com/zilinyo/*
 
   wsl:
     # If true append is only allowed to be cuddled if appending value is
