@@ -19,10 +19,8 @@ import (
 	"github.com/zilinyo/tools/db/pagination"
 	"github.com/zilinyo/tools/errs"
 	"github.com/zilinyo/tools/utils/jsonutil"
-	"math/rand"
 	"reflect"
 	"sort"
-	"time"
 )
 
 // SliceSubFuncs returns elements in slice a that are not present in slice b (a - b) and remove duplicates.
@@ -192,38 +190,6 @@ func IndexOf[E comparable](e E, es ...E) int {
 	})
 }
 
-// DeleteElems delete elems in slice.
-func DeleteElems[E comparable](es []E, delEs ...E) []E {
-	switch len(delEs) {
-	case 0:
-		return es
-	case 1:
-		for i := range es {
-			if es[i] == delEs[0] {
-				return append(es[:i], es[i+1:]...)
-			}
-		}
-		return es
-	default:
-		elMap := make(map[E]int)
-		for _, e := range delEs {
-			elMap[e]++
-		}
-		res := make([]E, 0, len(es))
-		for i := range es {
-			if _, ok := elMap[es[i]]; ok {
-				elMap[es[i]]--
-				if elMap[es[i]] == 0 {
-					delete(elMap, es[i])
-				}
-				continue
-			}
-			res = append(res, es[i])
-		}
-		return res
-	}
-}
-
 // Contain Whether to include
 func Contain[E comparable](e E, es ...E) bool {
 	return IndexOf(e, es...) >= 0
@@ -284,15 +250,6 @@ func SliceSetAny[E any, K comparable](es []E, fn func(e E) K) map[K]struct{} {
 	})
 }
 
-// MapToSlice map to slice
-func MapToSlice[E any, K comparable](m map[K]E) []E {
-	es := make([]E, 0, len(m))
-	for _, v := range m {
-		es = append(es, v)
-	}
-	return es
-}
-
 func Filter[E, T any](es []E, fn func(e E) (T, bool)) []T {
 	rs := make([]T, 0, len(es))
 	for i := 0; i < len(es); i++ {
@@ -349,26 +306,6 @@ func Max[E Ordered](e ...E) E {
 		}
 	}
 	return v
-}
-
-// Between checks if data is between left and right, excluding equality.
-func Between[E Ordered](data, left, right E) bool {
-	return left < data && data < right
-}
-
-// BetweenEq checks if data is between left and right, including equality.
-func BetweenEq[E Ordered](data, left, right E) bool {
-	return left <= data && data <= right
-}
-
-// BetweenLEq checks if data is between left and right, including left equality.
-func BetweenLEq[E Ordered](data, left, right E) bool {
-	return left <= data && data < right
-}
-
-// BetweenREq checks if data is between left and right, including right equality.
-func BetweenREq[E Ordered](data, left, right E) bool {
-	return left < data && data <= right
 }
 
 func Paginate[E any](es []E, pageNumber int, showNumber int) []E {
@@ -700,21 +637,6 @@ func SetSwitchFromOptions(options map[string]bool, key string, value bool) {
 // copy a by b  b->a
 func CopyStructFields(a any, b any, fields ...string) (err error) {
 	return copier.Copy(a, b)
-}
-
-func CopySlice[T any](a []T) []T {
-	ns := make([]T, len(a))
-	copy(ns, a)
-	return ns
-}
-
-func ShuffleSlice[T any](a []T) []T {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	shuffled := CopySlice(a)
-	r.Shuffle(len(shuffled), func(i, j int) {
-		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
-	})
-	return shuffled
 }
 
 func GetElemByIndex(array []int, index int) (int, error) {

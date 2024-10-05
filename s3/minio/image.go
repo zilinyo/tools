@@ -31,13 +31,6 @@ const (
 	formatJpeg = "jpeg"
 	formatJpg  = "jpg"
 	formatGif  = "gif"
-	formatWebP = "webp"
-	formatTiff = "tiff"
-	formatBmp  = "bmp"
-
-	formatHeic = "heic"
-	formatHeif = "heif"
-	formatAvif = "avif"
 )
 
 func ImageStat(reader io.Reader) (image.Image, string, error) {
